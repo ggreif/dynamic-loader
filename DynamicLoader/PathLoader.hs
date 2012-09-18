@@ -37,7 +37,6 @@ import Control.Concurrent.MVar
 import Data.List
 import qualified Data.HashTable as HT
 import Data.IORef
-import System.IO.Error
 import System.IO.Unsafe
 import System.Directory
 import Data.Time
