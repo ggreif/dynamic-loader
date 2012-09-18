@@ -1,0 +1,12 @@
+A very simple webserver with support for plugins.
+
+Compile example with command: 
+make
+
+To test server run:
+a.out
+
+then bring up a web browser and visit:
+
+http://127.0.0.1:8080/files/index.html
+http://127.0.0.1:8080/files/index.upp

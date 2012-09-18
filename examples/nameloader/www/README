@@ -1,0 +1,13 @@
+A simple, somewhat special web server. It only uses precompiled
+Haskell objects as pages.
+
+To compile run the following command:
+make
+
+To test the server run:
+./a.out
+
+then visit the pages with a web browser:
+
+http://127.0.0.1:8080/Page
+http://127.0.0.1:8080/Sub/Page
