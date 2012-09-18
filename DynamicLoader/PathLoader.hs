@@ -13,6 +13,8 @@
 -- is thread safe.
 --
 ----------------------------------------------------------------------------
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module DynamicLoader.PathLoader (LoadedModule,
                                  ModuleType (..),
                                  setBasePath,
@@ -38,9 +40,10 @@ import Data.IORef
 import System.IO.Error
 import System.IO.Unsafe
 import System.Directory
-import System.Time
+import Data.Time
+import Control.Exception (catch, SomeException)
 
-import qualified DynamicLoader.DynamicLoader as DL
+import qualified DynamicLoader as DL
 
 data LoadedModule = LM FilePath ModuleType
 
@@ -56,7 +59,7 @@ type PathDep = [ModuleWT]
 
 -- PM reference_count type time module
 data PathModule = PM { pm_refc   :: !Int,
-                        pm_time   :: ClockTime,
+                        pm_time   :: UTCTime,
                         pm_deps   :: PathDep,
                         pm_module :: PathDynamics }
 
@@ -215,7 +218,7 @@ midLoadModule Nothing nwt@(_, name) env@(_, deph, _)
          depmods <- lookupDefHT deph [] name
          return (PM 1 time depmods sd, depmods)
 
-lowLoadModule :: ModuleWT -> PathEnvData -> IO (PathDynamics, ClockTime)
+lowLoadModule :: ModuleWT -> PathEnvData -> IO (PathDynamics, UTCTime)
 lowLoadModule (MT_Package, name) (_, _, _)
     = do lp <- DL.loadPackageFromPath name
          time <- getModificationTime (DL.dp_path lp)
@@ -244,7 +247,7 @@ Same as @unloadModule@ just doesn't trow any exceptions on error.
 unloadModuleQuiet :: LoadedModule -> IO ()
 unloadModuleQuiet (LM name _)
     = withPathEnv env (\env -> catch (unloadModuleWithDep name env)
-                                  (\_ -> return ()))
+                                  (\(_ :: SomeException) -> return ()))
 
 unloadModuleWithDep :: FilePath -> PathEnvData -> IO ()
 unloadModuleWithDep name env@(_, _, modh)
@@ -312,11 +315,11 @@ Give the modification time for a loded module. Will throw an exception
 if the module isn't loaded.
 
 -}
-moduleLoadedAt :: LoadedModule -> IO ClockTime
+moduleLoadedAt :: LoadedModule -> IO UTCTime
 moduleLoadedAt (LM m _)
     = withPathEnvNB env (moduleLoadedAt' m)
 
-moduleLoadedAt' :: FilePath -> PathEnvData -> IO ClockTime
+moduleLoadedAt' :: FilePath -> PathEnvData -> IO UTCTime
 moduleLoadedAt' name (_, _, modh)
     = do mpm <- HT.lookup modh name 
          pm <- maybe (fail $ "Module " ++ name ++ " not loaded")

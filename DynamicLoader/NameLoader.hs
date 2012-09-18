@@ -13,23 +13,25 @@
 -- is thread safe.
 --
 ----------------------------------------------------------------------------
-module DynamicLoader.NameLoader (Module, LoadedModule,
-                                 ModuleType(..),
-                                 setEnvironment,
-                                 addDependency,
-                                 delDependency,
-                                 delAllDeps,
-                                 withDependencies,
-                                 loadModule,
-                                 unloadModule,
-                                 unloadModuleQuiet,
-                                 loadFunction,
-                                 moduleLoadedAt,
-                                 loadedModules,
-                                 sm_path,
-                                 DL.addDLL) where
+{-# LANGUAGE ScopedTypeVariables #-}
 
-import Char (isUpper)
+module NameLoader (Module, LoadedModule,
+                   ModuleType(..),
+                   setEnvironment,
+                   addDependency,
+                   delDependency,
+                   delAllDeps,
+                   withDependencies,
+                   loadModule,
+                   unloadModule,
+                   unloadModuleQuiet,
+                   loadFunction,
+                   moduleLoadedAt,
+                   loadedModules,
+                   sm_path,
+                   DL.addDLL) where
+
+import Data.Char (isUpper)
 
 import Control.Monad
 import Control.Concurrent.MVar
@@ -39,9 +41,10 @@ import Data.IORef
 import System.IO.Error
 import System.IO.Unsafe
 import System.Directory
-import System.Time
+import Data.Time
+import Control.Exception (catch, SomeException)
 
-import qualified DynamicLoader.DynamicLoader as DL
+import qualified DynamicLoader as DL
 
 type Module = String
 
@@ -59,7 +62,7 @@ type NameDep = [Module]
 
 -- SM reference_count type time module
 data NameModule = SM { sm_refc   :: !Int,
-                       sm_time   :: ClockTime,
+                       sm_time   :: UTCTime,
                        sm_deps   :: NameDep,
                        sm_module :: NameDynamics }
 
@@ -218,7 +221,7 @@ midLoadModule Nothing name env@(_, _, _, _, _, deph, _)
          depmods <- lookupDefHT deph [] name
          return (SM 1 time depmods sd, depmods)
 
-lowLoadModule :: ModuleWT -> NameEnvData -> IO (NameDynamics, ClockTime)
+lowLoadModule :: ModuleWT -> NameEnvData -> IO (NameDynamics, UTCTime)
 lowLoadModule (name, MT_Package) (_, _, ppath, ppre, psuff, _, _)
     = do lp <- DL.loadPackage name ppath ppre psuff
          time <- getModificationTime (DL.dp_path lp)
@@ -247,7 +250,7 @@ Same as @unloadModule@ just doesn't trow any exceptions on error.
 unloadModuleQuiet :: LoadedModule -> IO ()
 unloadModuleQuiet (LM name)
     = withNameEnv env (\env -> catch (unloadModuleWithDep name env)
-                                  (\_ -> return ()))
+                                  (\(_ :: SomeException) -> return ()))
 
 unloadModuleWithDep :: Module -> NameEnvData -> IO ()
 unloadModuleWithDep name env@(_, _, _, _, _, _, modh)
@@ -301,11 +304,11 @@ Give the modification time for a loded module. Will throw an exception
 if the module isn't loaded.
 
 -}
-moduleLoadedAt :: LoadedModule -> IO ClockTime
+moduleLoadedAt :: LoadedModule -> IO UTCTime
 moduleLoadedAt (LM m)
     = withNameEnvNB env (moduleLoadedAt' m)
 
-moduleLoadedAt' :: Module -> NameEnvData -> IO ClockTime
+moduleLoadedAt' :: Module -> NameEnvData -> IO UTCTime
 moduleLoadedAt' name (_, _, _, _, _, _, modh)
     = do msm <- HT.lookup modh name 
          sm <- maybe (fail $ "Module " ++ name ++ " not loaded")

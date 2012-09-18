@@ -1,4 +1,4 @@
-{-# OPTIONS -cpp -fglasgow-exts #-}
+{-# LANGUAGE CPP, MagicHash, UnboxedTuples #-}
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  DynamicLoader
@@ -13,31 +13,32 @@
 -- and use GHC object files and packages dynamically at runtime.
 --
 ----------------------------------------------------------------------------
-module DynamicLoader.DynamicLoader (DynamicModule,
-                                    dm_path,
-                                    DynamicPackage,
-                                    dp_path,
+module DynamicLoader (DynamicModule,
+                      dm_path,
+                      DynamicPackage,
+                      dp_path,
 
-                                    addDLL,
-                            
-                                    loadModule,
-                                    loadModuleFromPath,
-                                    loadPackage,
-                                    loadPackageFromPath,
-                                    unloadModule,
-                                    unloadPackage,
-                                    loadFunction,
-                                    loadQualifiedFunction,
-                                    resolveFunctions) where
+                      addDLL,
 
-import Char (ord)
-import List
-import Monad
+                      loadModule,
+                      loadModuleFromPath,
+                      loadPackage,
+                      loadPackageFromPath,
+                      unloadModule,
+                      unloadPackage,
+                      loadFunction,
+                      loadQualifiedFunction,
+                      resolveFunctions) where
 
-import GHC.Exts  hiding (split)
+import Data.Char (ord)
+import Data.List
+import Control.Monad
+
+import GHC.Exts
 import Foreign.Ptr      (Ptr, nullPtr)
 import Foreign.C.String (CString, withCString)
 import System.Directory (getCurrentDirectory, doesFileExist)
+import GHC.Prim
 
 {-
 
@@ -278,7 +279,7 @@ Beware that this function isn't type-safe in any way!
 loadFunction :: DynamicModule -> String -> IO a
 loadFunction dm functionName 
     = do Ptr addr <- lookupSymbol (dm_qname dm) functionName
-         case addrToHValue# addr of
+         case addrToAny# addr of
                   (# hval #) -> return hval
 
 {-|
@@ -300,7 +301,7 @@ loadQualifiedFunction :: String -> IO a
 loadQualifiedFunction functionName
     = do let qfunc = split '.' functionName
          Ptr addr <- lookupSymbol (init qfunc) (last qfunc)
-         case addrToHValue# addr of
+         case addrToAny# addr of
                   (# hval #) -> return hval
 
 {-|
