@@ -6,7 +6,7 @@ import Control.Monad
 import Control.Concurrent
 import Network
 
-import PathLoader
+import DynamicLoader.PathLoader
 
 
 main 

@@ -4,7 +4,7 @@ import Data.List
 import Control.Monad
 import Network
 
-import DynamicLoader
+import DynamicLoader.DynamicLoader
 
 main 
     = do cwd <- getCurrentDirectory 

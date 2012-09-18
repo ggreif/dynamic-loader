@@ -13,21 +13,22 @@
 -- is thread safe.
 --
 ----------------------------------------------------------------------------
-module PathLoader (LoadedModule,
-                   ModuleType (..),
-                   setBasePath,
-                   addDependency,
-                   setDependencies,
-                   delDependency,
-                   delAllDeps,
-                   withDependencies,
-                   loadModule,
-                   unloadModule,
-                   unloadModuleQuiet,
-                   loadFunction,
-                   loadQualifiedFunction,
-                   moduleLoadedAt,
-                   DL.addDLL) where
+module DynamicLoader.PathLoader (LoadedModule,
+                                 ModuleType (..),
+                                 setBasePath,
+                                 addDependency,
+                                 setDependencies,
+                                 delDependency,
+                                 delAllDeps,
+                                 withDependencies,
+                                 loadModule,
+                                 unloadModule,
+                                 unloadModuleQuiet,
+                                 loadFunction,
+                                 loadQualifiedFunction,
+                                 moduleLoadedAt,
+                                 loadedModules,
+                                 DL.addDLL) where
 
 import Control.Monad
 import Control.Concurrent.MVar
@@ -39,13 +40,13 @@ import System.IO.Unsafe
 import System.Directory
 import System.Time
 
-import qualified DynamicLoader as DL
+import qualified DynamicLoader.DynamicLoader as DL
 
 data LoadedModule = LM FilePath ModuleType
 
 data ModuleType = MT_Module
                 | MT_Package
-                  deriving (Eq, Ord)
+                  deriving (Eq, Ord, Show)
 
 type ModuleWT = (ModuleType, FilePath)
 
@@ -64,6 +65,7 @@ data PathModule = PM { pm_refc   :: !Int,
 type PathEnvData = (Maybe FilePath,
                     HT.HashTable String [ModuleWT],
                     HT.HashTable String PathModule)
+
 
 {- 
 
@@ -320,6 +322,12 @@ moduleLoadedAt' name (_, _, modh)
          pm <- maybe (fail $ "Module " ++ name ++ " not loaded")
                      return mpm
          return (pm_time pm)
+
+loadedModules :: IO [String]
+loadedModules = withPathEnvNB env loadedModules' 
+
+loadedModules' :: PathEnvData -> IO [String]
+loadedModules' (_, _, modh) = HT.toList modh >>= (\lst -> return (map fst lst))
 
 -- functions to handle HashTables in a better way
 

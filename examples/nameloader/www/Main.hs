@@ -5,7 +5,7 @@ import Control.Monad
 import Control.Concurrent
 import Network
 
-import NameLoader
+import DynamicLoader.NameLoader
 
 
 main 
