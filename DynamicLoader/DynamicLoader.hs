@@ -2,7 +2,7 @@
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  DynamicLoader
--- Copyright   :  (c) Hampus Ram 2003
+-- Copyright   :  (c) Hampus Ram 2003-2004
 -- License     :  BSD-style (see LICENSE)
 -- 
 -- Maintainer  :  d00ram@dtek.chalmers.se
@@ -91,7 +91,7 @@ is given \"o\" is used.
 
 If we have our module hierarchy in @\/usr\/lib\/modules@ and we want to
 load the module @Foo.Bar@ located in @\/usr\/lib\/modules\/Foo\/Bar.o@ we
-could isse the command: 
+could issue the command: 
 
 @loadModule \"Foo.Bar\" (Just \"\/usr\/lib\/modules\") Nothing@
 
@@ -119,13 +119,13 @@ loadModule name mpath msuff
 {-|
 
 Load a module given its full path and maybe a base directory to use in
-figuring out the modules hierarchical name. If no base directory is
+figuring out the module's hierarchical name. If no base directory is
 given, it is set to the current directory.
 
 For instance if one wants to load module @Foo.Bar@ located in 
 @\/usr\/modules\/Foo\/Bar.o@ one would issue the command:
 
-@loadModuleWithPath \"\/usr\/modules\/Foo\/Bar.o\" (Just
+@loadModuleFromPath \"\/usr\/modules\/Foo\/Bar.o\" (Just
 \"\/usr\/modules\")@
 
 If it cannot load the object it will throw an exception.
@@ -151,9 +151,9 @@ loadModuleFromPath path mbase
     where dropIsEq [] ys = return ys
           dropIsEq (x:xs) (y:ys)
                    | x == y    = dropIsEq xs ys
-                   | otherwise = fail $ "Unable get qualified name from: " 
+                   | otherwise = fail $ "Unable to get qualified name from: " 
                                        ++ path
-          dropIsEq _ _ = fail $ "Unable get qualified name from: " ++ path
+          dropIsEq _ _ = fail $ "Unable to get qualified name from: " ++ path
 
 split :: Char -> String -> [String]
 split _ ""   = []
@@ -318,7 +318,7 @@ resolveFunctions
 
 {-|
 
-Find a symbol in a modules symbol-table. Throw an exception if it
+Find a symbol in a module's symbol-table. Throw an exception if it
 isn't found.
 
 -}
