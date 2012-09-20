@@ -9,11 +9,14 @@ Name:                dynamic-loader
 -- standards guiding when and how versions should be incremented.
 Version:             0.0
 
--- A short (one-line) description of the package.
-Synopsis:            Lightweight loader of GHC-based modules or packages
+Synopsis:            lightweight loader of GHC-based modules or packages
 
--- A longer description of the package.
--- Description:         
+Description:         This package allows the linking against GHC-compiled
+                     object files and shared libraries. Specialized modules
+                     are provided for navigating directory structure and
+                     dependency checking.
+                     .
+                     No attempt at type-safe loading of symbols is made.
 
 -- URL for the project homepage or repository.
 Homepage:            https://github.com/ggreif/dynamic-loader
@@ -29,12 +32,16 @@ Author:              Hampus Ram
 
 -- An email address to which users can send suggestions, bug reports,
 -- and patches.
-Maintainer:          ggreif@gmail.com
+Maintainer:          Gabor Greif <ggreif+dynamic@gmail.com>
 
 -- A copyright notice.
--- Copyright:           
+Copyright:           Copyright (c) 2003-2004, Hampus Ram
+                     Copyright (c) 2012, Gabor Greif
 
-Category:            Development
+Category:            System
+
+Stability:           experimental
+Tested-with:         GHC == 7.6.1
 
 Build-type:          Simple
 
@@ -43,19 +50,21 @@ Build-type:          Simple
 -- Extra-source-files:  
 
 -- Constraint on the version of Cabal needed to build this package.
-Cabal-version:       >=1.2
-
+Cabal-version:       >=1.6
 
 Library
   -- Modules exported by the library.
-  Exposed-modules:     DynamicLoader.DynamicLoader, DynamicLoader.PathLoader, DynamicLoader.NameLoader, Main, Upper, Main, Page, Sub.Page, Main, Page, Sub.Page
-  
+  Exposed-modules:     DynamicLoader.DynamicLoader, DynamicLoader.PathLoader, DynamicLoader.NameLoader
+
+  Extensions:          CPP, ForeignFunctionInterface, MagicHash, ScopedTypeVariables, UnboxedTuples
+
   -- Packages needed in order to build this package.
-  -- Build-depends:       
-  
+  Build-depends:       base >= 4.5 && < 5
+
   -- Modules not exported by this package.
   -- Other-modules:       
-  
+
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Build-tools:         
-  
+
+  Ghc-Options:         -Wall
