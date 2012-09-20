@@ -1,10 +1,10 @@
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  NameLoader
--- Copyright   :  (c) Hampus Ram 2004
+-- Copyright   :  (c) Hampus Ram 2004, Gabor Greif 2012
 -- License     :  BSD-style (see LICENSE)
 -- 
--- Maintainer  :  d00ram@dtek.chalmers.se
+-- Maintainer  :  ggreif+dynamic@gmail.com
 -- Stability   :  experimental
 -- Portability :  non-portable (ghc >= 6 only)
 --
