@@ -33,7 +33,6 @@ module System.Plugins.NameLoader (Module, LoadedModule,
 
 import Data.Char (isUpper)
 
-import Control.Monad
 import Control.Concurrent.MVar
 import Data.List
 import qualified Data.HashTable as HT
@@ -337,25 +336,32 @@ nameToMWT _ = error "empty module names not allowed"
 -- functions to handle HashTables in a better way
 
 -- it seems like it doesn't replace the old value on insert
+insertHT :: HT.HashTable key val -> key -> val -> IO ()
 insertHT ht key val 
     = do HT.delete ht key
          HT.insert ht key val
 
+insertHT_C :: (val -> val -> val) -> HT.HashTable key val -> key -> val -> IO ()
 insertHT_C func ht key val
     = do mval <- HT.lookup ht key
          case mval of
                    Just val' -> insertHT ht key (func val val')
                    Nothing   -> insertHT ht key val
 
+modifyHT :: (val -> val) -> HT.HashTable key val -> key -> IO ()
 modifyHT func ht key
     = do mval <- HT.lookup ht key
          case mval of
                    Just val -> insertHT ht key (func val)
                    Nothing  -> return ()
 
+lookupHT :: HT.HashTable key val -> key -> IO (Maybe val)
 lookupHT ht key = HT.lookup ht key
+
+deleteHT :: HT.HashTable key val -> key -> IO ()
 deleteHT ht key = HT.delete ht key
 
+lookupDefHT :: HT.HashTable key b -> b -> key -> IO b
 lookupDefHT ht val key
     = do mval <- HT.lookup ht key
          case mval of
