@@ -36,7 +36,7 @@ import Control.Monad
 
 import GHC.Exts
 import Foreign.Ptr      (Ptr, nullPtr)
-import Foreign.C.String (CString, withCString)
+import Foreign.C.String (CString, withCString, peekCString)
 import System.Directory (getCurrentDirectory, doesFileExist)
 import GHC.Prim
 
@@ -80,7 +80,8 @@ addDLL :: String -> IO ()
 addDLL str = withCString str 
                (\s -> do err <- c_addDLL s
                          unless (err == nullPtr)
-                                (fail $ "Unable to load library: " ++ str))
+                                (do msg <- peekCString err
+                                    fail $ "Unable to load library: " ++ str ++ "\n  " ++ msg))
 
 {-|
 
@@ -348,9 +349,9 @@ lookupSymbol qname functionName
     unencodedChar 'z' = False
     unencodedChar c   = c >= 'a' && c <= 'z'
                         || c >= 'A' && c <= 'Z'
-		        || c >= '0' && c <= '9'
+                        || c >= '0' && c <= '9'
 
-    encode_ch c | unencodedChar c = [c]	-- Common case first
+    encode_ch c | unencodedChar c = [c] -- Common case first
     encode_ch 'Z'  = "ZZ"
     encode_ch 'z'  = "zz"
     encode_ch '&'  = "za"
