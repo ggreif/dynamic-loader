@@ -20,6 +20,7 @@ Description:         This package allows the linking against GHC-compiled
 
 -- URL for the project homepage or repository.
 Homepage:            https://github.com/ggreif/dynamic-loader
+Bug-reports:         https://github.com/ggreif/dynamic-loader/issues
 
 -- The license under which the package is released.
 License:             BSD3
@@ -68,3 +69,7 @@ Library
   -- Build-tools:         
 
   Ghc-Options:         -Wall
+
+Source-repository head
+  type:     git
+  location: git://github.com/ggreif/dynamic-loader.git
