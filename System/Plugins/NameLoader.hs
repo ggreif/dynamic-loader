@@ -6,7 +6,7 @@
 -- 
 -- Maintainer  :  ggreif+dynamic@gmail.com
 -- Stability   :  experimental
--- Portability :  non-portable (ghc >= 6 only)
+-- Portability :  non-portable (ghc >= 7.6 only)
 --
 -- A module that implements dynamic loading.
 -- Has smart handling of dependencies and

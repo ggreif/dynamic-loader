@@ -7,7 +7,7 @@
 -- 
 -- Maintainer  :  ggreif+dynamic@gmail.com
 -- Stability   :  experimental
--- Portability :  non-portable (ghc >= 6 only)
+-- Portability :  non-portable (ghc >= 7.6 only)
 --
 -- A module that implements dynamic loading. You can load
 -- and use GHC object files and packages dynamically at runtime.
