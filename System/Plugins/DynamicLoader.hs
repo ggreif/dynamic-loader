@@ -13,22 +13,22 @@
 -- and use GHC object files and packages dynamically at runtime.
 --
 ----------------------------------------------------------------------------
-module DynamicLoader (DynamicModule,
-                      dm_path,
-                      DynamicPackage,
-                      dp_path,
+module System.Plugins.DynamicLoader (DynamicModule,
+                                     dm_path,
+                                     DynamicPackage,
+                                     dp_path,
 
-                      addDLL,
+                                     addDLL,
 
-                      loadModule,
-                      loadModuleFromPath,
-                      loadPackage,
-                      loadPackageFromPath,
-                      unloadModule,
-                      unloadPackage,
-                      loadFunction,
-                      loadQualifiedFunction,
-                      resolveFunctions) where
+                                     loadModule,
+                                     loadModuleFromPath,
+                                     loadPackage,
+                                     loadPackageFromPath,
+                                     unloadModule,
+                                     unloadPackage,
+                                     loadFunction,
+                                     loadQualifiedFunction,
+                                     resolveFunctions) where
 
 import Data.Char (ord)
 import Data.List

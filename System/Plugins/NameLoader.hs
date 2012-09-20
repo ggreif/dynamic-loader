@@ -15,21 +15,21 @@
 ----------------------------------------------------------------------------
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module NameLoader (Module, LoadedModule,
-                   ModuleType(..),
-                   setEnvironment,
-                   addDependency,
-                   delDependency,
-                   delAllDeps,
-                   withDependencies,
-                   loadModule,
-                   unloadModule,
-                   unloadModuleQuiet,
-                   loadFunction,
-                   moduleLoadedAt,
-                   loadedModules,
-                   sm_path,
-                   DL.addDLL) where
+module System.Plugins.NameLoader (Module, LoadedModule,
+                                  ModuleType(..),
+                                  setEnvironment,
+                                  addDependency,
+                                  delDependency,
+                                  delAllDeps,
+                                  withDependencies,
+                                  loadModule,
+                                  unloadModule,
+                                  unloadModuleQuiet,
+                                  loadFunction,
+                                  moduleLoadedAt,
+                                  loadedModules,
+                                  sm_path,
+                                  DL.addDLL) where
 
 import Data.Char (isUpper)
 
@@ -43,7 +43,7 @@ import System.Directory
 import Data.Time
 import Control.Exception (catch, SomeException)
 
-import qualified DynamicLoader as DL
+import qualified System.Plugins.DynamicLoader as DL
 
 type Module = String
 

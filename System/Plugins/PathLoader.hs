@@ -15,22 +15,22 @@
 ----------------------------------------------------------------------------
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module DynamicLoader.PathLoader (LoadedModule,
-                                 ModuleType (..),
-                                 setBasePath,
-                                 addDependency,
-                                 setDependencies,
-                                 delDependency,
-                                 delAllDeps,
-                                 withDependencies,
-                                 loadModule,
-                                 unloadModule,
-                                 unloadModuleQuiet,
-                                 loadFunction,
-                                 loadQualifiedFunction,
-                                 moduleLoadedAt,
-                                 loadedModules,
-                                 DL.addDLL) where
+module System.Plugins.PathLoader (LoadedModule,
+                                  ModuleType (..),
+                                  setBasePath,
+                                  addDependency,
+                                  setDependencies,
+                                  delDependency,
+                                  delAllDeps,
+                                  withDependencies,
+                                  loadModule,
+                                  unloadModule,
+                                  unloadModuleQuiet,
+                                  loadFunction,
+                                  loadQualifiedFunction,
+                                  moduleLoadedAt,
+                                  loadedModules,
+                                  DL.addDLL) where
 
 import Control.Monad
 import Control.Concurrent.MVar
@@ -42,7 +42,7 @@ import System.Directory
 import Data.Time
 import Control.Exception (catch, SomeException)
 
-import qualified DynamicLoader as DL
+import qualified System.Plugins.DynamicLoader as DL
 
 data LoadedModule = LM FilePath ModuleType
 
