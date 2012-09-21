@@ -35,7 +35,8 @@ import Data.Char (isUpper)
 
 import Control.Concurrent.MVar
 import Data.List
-import qualified Data.HashTable as HT
+import qualified Data.HashTable.IO as HT
+import Data.Hashable
 import Data.IORef
 import System.IO.Unsafe
 import System.Directory
@@ -69,8 +70,8 @@ data NameModule = SM { sm_refc   :: !Int,
 -- dependency_map modules
 type NameEnvData = (Maybe FilePath, Maybe String,
                     Maybe FilePath, Maybe String, Maybe String,
-                    HT.HashTable String [Module],
-                    HT.HashTable String NameModule)
+                    HT.BasicHashTable String [Module],
+                    HT.BasicHashTable String NameModule)
 
 {- 
 
@@ -97,8 +98,8 @@ modifyNameEnv_ (mvar, ioref) f
 
 {-# NOINLINE env #-}
 env :: NameEnv
-env = unsafePerformIO (do modh <- HT.new (==) HT.hashString
-                          deph <- HT.new (==) HT.hashString
+env = unsafePerformIO (do modh <- HT.new
+                          deph <- HT.new
                           mvar <- newMVar ()
                           ioref <- newIORef (Nothing, Nothing, Nothing,
                                              Nothing, Nothing, deph, modh)
@@ -336,32 +337,32 @@ nameToMWT _ = error "empty module names not allowed"
 -- functions to handle HashTables in a better way
 
 -- it seems like it doesn't replace the old value on insert
-insertHT :: HT.HashTable key val -> key -> val -> IO ()
+insertHT :: (Eq key, Hashable key) => HT.BasicHashTable key val -> key -> val -> IO ()
 insertHT ht key val 
     = do HT.delete ht key
          HT.insert ht key val
 
-insertHT_C :: (val -> val -> val) -> HT.HashTable key val -> key -> val -> IO ()
+insertHT_C :: (Eq key, Hashable key) => (val -> val -> val) -> HT.BasicHashTable key val -> key -> val -> IO ()
 insertHT_C func ht key val
     = do mval <- HT.lookup ht key
          case mval of
                    Just val' -> insertHT ht key (func val val')
                    Nothing   -> insertHT ht key val
 
-modifyHT :: (val -> val) -> HT.HashTable key val -> key -> IO ()
+modifyHT :: (Eq key, Hashable key) => (val -> val) -> HT.BasicHashTable key val -> key -> IO ()
 modifyHT func ht key
     = do mval <- HT.lookup ht key
          case mval of
                    Just val -> insertHT ht key (func val)
                    Nothing  -> return ()
 
-lookupHT :: HT.HashTable key val -> key -> IO (Maybe val)
+lookupHT :: (Eq key, Hashable key) => HT.BasicHashTable key val -> key -> IO (Maybe val)
 lookupHT ht key = HT.lookup ht key
 
-deleteHT :: HT.HashTable key val -> key -> IO ()
+deleteHT :: (Eq key, Hashable key) => HT.BasicHashTable key val -> key -> IO ()
 deleteHT ht key = HT.delete ht key
 
-lookupDefHT :: HT.HashTable key b -> b -> key -> IO b
+lookupDefHT :: (Eq key, Hashable key) => HT.BasicHashTable key b -> b -> key -> IO b
 lookupDefHT ht val key
     = do mval <- HT.lookup ht key
          case mval of

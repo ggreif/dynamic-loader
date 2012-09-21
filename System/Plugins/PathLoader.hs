@@ -35,7 +35,7 @@ module System.Plugins.PathLoader (LoadedModule,
 import Control.Monad
 import Control.Concurrent.MVar
 import Data.List
-import qualified Data.HashTable as HT
+import qualified Data.HashTable.IO as HT
 import Data.IORef
 import System.IO.Unsafe
 import System.Directory
@@ -65,8 +65,8 @@ data PathModule = PM { pm_refc   :: !Int,
 
 -- base_path dependency_map modules
 type PathEnvData = (Maybe FilePath,
-                    HT.HashTable String [ModuleWT],
-                    HT.HashTable String PathModule)
+                    HT.BasicHashTable String [ModuleWT],
+                    HT.BasicHashTable String PathModule)
 
 
 {- 
@@ -91,8 +91,8 @@ modifyPathEnv_ (mvar, ioref) f
 
 {-# NOINLINE env #-}
 env :: PathEnv
-env = unsafePerformIO (do modh <- HT.new (==) HT.hashString
-                          deph <- HT.new (==) HT.hashString
+env = unsafePerformIO (do modh <- HT.new
+                          deph <- HT.new
                           mvar <- newMVar ()
                           ioref <- newIORef (Nothing, deph, modh)
                           return (mvar, ioref))
