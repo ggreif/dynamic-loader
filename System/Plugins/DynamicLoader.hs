@@ -62,7 +62,7 @@ foreign import ccall unsafe "addDLL"
      c_addDLL :: CString -> IO CString
 
 -- split up qualified name so one could easily transform it
--- into A.B.C or A/B/C  depending on contex.
+-- into A.B.C or A/B/C  depending on context
 data DynamicModule = RTM { dm_qname :: [String],
                            dm_path  :: FilePath }
 
@@ -168,7 +168,7 @@ Load a GHC package such as \"base\" or \"text\". Takes the package name,
 maybe a path to the packages, maybe a package prefix and maybe a
 package suffix.
 
-Path defaults to the current directory, package preifix to \"HS\" and
+Path defaults to the current directory, package prefix to \"HS\" and
 package suffix to \"o\".
 
 This function also loads accompanying cbits-packages. I.e. if you load
@@ -271,7 +271,7 @@ unloadModule (RTM { dm_path = path })
 {-|
 
 Load a function from a given module. If the function can't be found an
-exception will be thrown. You should have called resolveFunctions before
+exception will be thrown. You should have called @resolveFunctions@ before
 you call this.
 
 Beware that this function isn't type-safe in any way!
@@ -286,8 +286,8 @@ loadFunction dm functionName
 {-|
 
 Load a function from package (or module) given the fully qualified
-name (e.g. @Data.FinitMap.emptyFM@). If the function can't be found an
-exception will be thrown. You should have called resolveFunctions
+name (e.g. @Data.FiniteMap.emptyFM@). If the function can't be found an
+exception will be thrown. You should have called @resolveFunctions@
 before you call this.
 
 You must take care that you load the function qualified with the name
@@ -333,7 +333,7 @@ lookupSymbol qname functionName
     moduleName = encode $ concat (intersperse "." qname)
     realFunctionName = encode functionName
 
-    -- On Mac OSX all functions have an extra _, at least that
+    -- On OS X all functions have an extra _, at least that
     -- is what people say. Not tested!
 #ifdef __MACOSX__
     symbolName = "_" ++ moduleName ++ "_" ++ realFunctionName ++ "_closure"
