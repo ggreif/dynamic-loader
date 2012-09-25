@@ -70,7 +70,7 @@ data DynamicPackage = RTP { dp_path  :: FilePath,
                             dp_cbits :: Maybe DynamicPackage }
 {-|
 
-Dynamically load a shared library (DLL or so). A shared library can't
+Dynamically load a shared library (DLL or .so). A shared library can't
 be unloaded using this interface, if you need it use
 System.Posix.DynamicLinker instead.
 
