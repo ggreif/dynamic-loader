@@ -56,10 +56,10 @@ Cabal-version:       >= 1.6
 Library
   -- Modules exported by the library.
   Exposed-modules:     System.Plugins.DynamicLoader, System.Plugins.PathLoader, System.Plugins.NameLoader
-                       System.Plugins.Criteria.LoadCriterion
+                       System.Plugins.Criteria.LoadCriterion, System.Plugins.Criteria.UnsafeCriterion
 
   Extensions:          CPP, ForeignFunctionInterface, MagicHash, ScopedTypeVariables, UnboxedTuples
-                       KindSignatures, TypeFamilies, MultiParamTypeClasses
+                       KindSignatures, TypeFamilies, MultiParamTypeClasses, FlexibleInstances
   --                   ConstraintKinds
 
   -- Packages needed in order to build this package.
