@@ -7,7 +7,7 @@ import Data.Dynamic
 instance LoadCriterion (Typeable t) t where
   data Criterion (Typeable t) t = DynamicCriterion
   type Effective (Typeable t) t = Maybe t
-  loadQualified DynamicCriterion n = loadQualifiedDynFunction (adornSymbol n)
+  loadQualified DynamicCriterion name = loadQualifiedDynFunction (adornSymbol name)
     where adornSymbol n = n ++ "Dyn"
 
 
