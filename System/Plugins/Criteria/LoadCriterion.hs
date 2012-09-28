@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures, ConstraintKinds,
              TypeFamilies, MultiParamTypeClasses #-}
 
-module System.Plugins.Criteria.LoadCriterion {-(LoadCriterion(..))-} where
+module System.Plugins.Criteria.LoadCriterion (LoadCriterion(..), Criterion(..)) where
 
 -- The 'Constraint' kind is defined in 'GHC.Exts'
 
