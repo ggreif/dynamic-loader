@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures, ConstraintKinds, TypeFamilies,
              MultiParamTypeClasses, FlexibleInstances #-}
 
-module System.Plugins.Criteria.UnsafeCriterion where
+module System.Plugins.Criteria.UnsafeCriterion (Criterion(..)) where
 
 import System.Plugins.Criteria.LoadCriterion
 import System.Plugins.DynamicLoader
