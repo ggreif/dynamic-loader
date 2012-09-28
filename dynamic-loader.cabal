@@ -63,7 +63,8 @@ Library
   --                   ConstraintKinds
 
   -- Packages needed in order to build this package.
-  Build-depends:       base >= 4.5 && < 5, directory, time, ghc-prim >= 0.2, hashable, hashtables
+  Build-depends:       base >= 4.5 && < 5, directory, time, ghc-prim >= 0.2,
+                       hashable, hashtables, transformers
 
   -- Modules not exported by this package.
   -- Other-modules:       

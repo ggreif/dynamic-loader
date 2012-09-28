@@ -8,6 +8,5 @@ import System.Plugins.DynamicLoader
 
 instance LoadCriterion () t where
   data Criterion () t = UnsafeCriterion
-  type Effective () t = t
+  type Effective () t = IO t
   loadQualified UnsafeCriterion = loadQualifiedFunction
-
