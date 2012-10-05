@@ -41,6 +41,8 @@ import System.IO.Unsafe
 import System.Directory
 import Data.Time
 import Control.Exception (catch, SomeException)
+import System.Plugins.Criteria.LoadCriterion
+import System.Plugins.Criteria.UnsafeCriterion
 
 import qualified System.Plugins.DynamicLoader as DL
 
@@ -78,12 +80,14 @@ type PathEnvData = (Maybe FilePath,
 -}
 type PathEnv = (MVar (), IORef PathEnvData)
 
-withPathEnv :: PathEnv -> (PathEnvData -> IO b) -> IO b
-withPathEnv (mvar, ioref) f
-    = withMVar mvar (\_ -> readIORef ioref >>= f)
+withPathEnv :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
+withPathEnv crit (mvar, ioref) f
+    = withMVar mvar (\_ -> readIORef ioref >>= f' crit)
+  where f' crit = f
 
-withPathEnvNB :: PathEnv -> (PathEnvData -> IO b) -> IO b
-withPathEnvNB (_, ioref) f = readIORef ioref >>= f
+withPathEnvNB :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
+withPathEnvNB crit (_, ioref) f = readIORef ioref >>= f' crit
+  where f' crit = f
 
 modifyPathEnv_ :: PathEnv -> (PathEnvData -> IO PathEnvData) -> IO ()
 modifyPathEnv_ (mvar, ioref) f
@@ -116,7 +120,7 @@ crash as result.
 
 -}
 addDependency :: FilePath -> (ModuleType, FilePath) -> IO ()
-addDependency from to = withPathEnv env (addDependency' from to)
+addDependency from to = withPathEnv UnsafeCriterion env (addDependency' from to)
 
 addDependency' :: FilePath -> (ModuleType, FilePath) -> PathEnvData -> IO ()
 addDependency' from to (_, deph, _)
@@ -129,7 +133,7 @@ Set all dependencies. All previous dependencies are removed.
 -}
 
 setDependencies :: FilePath -> [(ModuleType, FilePath)] -> IO ()
-setDependencies from to = withPathEnv env (setDependencies' from to)
+setDependencies from to = withPathEnv UnsafeCriterion env (setDependencies' from to)
 
 setDependencies' :: FilePath -> [(ModuleType, FilePath)] -> 
                     PathEnvData -> IO ()
@@ -142,7 +146,7 @@ Delete a module dependency.
 
 -}
 delDependency :: FilePath -> (ModuleType, FilePath) -> IO ()
-delDependency from to = withPathEnv env (delDependency' from to)
+delDependency from to = withPathEnv UnsafeCriterion env (delDependency' from to)
 
 delDependency' :: FilePath -> (ModuleType, FilePath) -> PathEnvData -> IO ()
 delDependency' from to (_, deph, _)
@@ -156,7 +160,7 @@ Delete all dependencies for a module. Same behaviour as
 -}
 
 delAllDeps :: FilePath -> IO ()
-delAllDeps from = withPathEnv env (delAllDeps' from)
+delAllDeps from = withPathEnv UnsafeCriterion env (delAllDeps' from)
 
 delAllDeps' :: FilePath -> PathEnvData -> IO ()
 delAllDeps' from (_, deph, _)
@@ -169,10 +173,11 @@ Do something with the current dependencies of a module. You can't use
 withDependencies. If you do so, a deadlock will occur.
 
 -}
-withDependencies :: FilePath -> 
-                    (Maybe [(ModuleType, FilePath)] -> IO a) -> IO a
-withDependencies from f
-    = withPathEnv env (\(_,deph,_) -> lookupHT deph from >>= f)
+withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> FilePath -> 
+                    (Maybe [(ModuleType, FilePath)] -> Effective c t) -> Effective c t
+withDependencies crit from f
+    = withPathEnv crit env (\(_,deph,_) -> lookupHT deph from >>= f' crit)
+  where f' crit = f
 
 {-|
 
@@ -195,9 +200,9 @@ If any error occurs an exception is thrown.
 -}
 loadModule :: FilePath -> ModuleType -> IO LoadedModule
 loadModule m mt
-    = do withPathEnv env (\env -> do loadModuleWithDep (mt, m) env
-                                     DL.resolveFunctions
-                                     return (LM m mt))
+    = do withPathEnv UnsafeCriterion env (\env -> do loadModuleWithDep (mt, m) env
+                                                     DL.resolveFunctions
+                                                     return (LM m mt))
 
 loadModuleWithDep :: (ModuleType, FilePath) -> PathEnvData -> IO ()
 loadModuleWithDep nwt@(_, name) env@(_, _, modh)
@@ -236,7 +241,7 @@ been loaded more than once. An exception is thrown in case of error.
 -}
 unloadModule :: LoadedModule -> IO ()
 unloadModule (LM name _) 
-    = withPathEnv env (unloadModuleWithDep name)
+    = withPathEnv UnsafeCriterion env (unloadModuleWithDep name)
 
 {-|
 
@@ -245,8 +250,8 @@ Same as @unloadModule@ just doesn't trow any exceptions on error.
 -}
 unloadModuleQuiet :: LoadedModule -> IO ()
 unloadModuleQuiet (LM name _)
-    = withPathEnv env (\env -> catch (unloadModuleWithDep name env)
-                                  (\(_ :: SomeException) -> return ()))
+    = withPathEnv UnsafeCriterion env (\env -> catch (unloadModuleWithDep name env)
+                                       (\(_ :: SomeException) -> return ()))
 
 unloadModuleWithDep :: FilePath -> PathEnvData -> IO ()
 unloadModuleWithDep name env@(_, _, modh)
@@ -277,20 +282,18 @@ still be valid if a new version of that module is loaded (it will thus
 still call the old function).
 
 -}
-loadFunction :: LoadedModule -> String -> IO a
-loadFunction (LM m MT_Module) name
-    = withPathEnv env (loadFunction' m name)
-loadFunction _ _ = fail "You cannot load functions from a package."
+loadFunction :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> LoadedModule -> String -> Effective c t
+loadFunction crit (LM m MT_Module) name
+    = withPathEnv crit env (loadFunction' crit m name)
+  where --loadFunction' :: String -> String -> PathEnvData -> IO a
+        loadFunction' crit mname fname (_, _, modh)
+            = do mpm <- HT.lookup modh mname
+                 pm <- maybe (fail $ "Module " ++ mname ++ " isn't loaded") 
+                             return mpm
+                 let Left dm = pm_module pm
+                 DL.loadFunction dm fname
 
-loadFunction' :: String -> String -> PathEnvData -> IO a
-loadFunction' mname fname (_, _, modh)
-    = do mpm <- HT.lookup modh mname
-         pm <- maybe (fail $ "Module " ++ mname ++ " isn't loaded") 
-                     return mpm
-
-         let Left dm = pm_module pm
-         
-         DL.loadFunction dm fname
+loadFunction _ _ _ = fail "You cannot load functions from a package."
 
 {-|
 
@@ -299,13 +302,11 @@ exception if an error occurs. Same restriction as for
 DynamicLinker.loadQualifiedFunction applies here too.
 
 -}
-loadQualifiedFunction :: String -> IO a
-loadQualifiedFunction name
-    = withPathEnv env (loadQualifiedFunction' name)
-
-loadQualifiedFunction' :: String -> PathEnvData -> IO a
-loadQualifiedFunction' qname _
-    = DL.loadQualifiedFunction qname
+loadQualifiedFunction :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> String -> Effective c t
+loadQualifiedFunction crit name
+    = withPathEnv crit env (loadQualifiedFunction' name)
+  where --loadQualifiedFunction' :: String -> PathEnvData -> IO a
+        loadQualifiedFunction' qname _ = DL.loadQualifiedFunction qname
 
 
 {-|
@@ -316,7 +317,7 @@ if the module isn't loaded.
 -}
 moduleLoadedAt :: LoadedModule -> IO UTCTime
 moduleLoadedAt (LM m _)
-    = withPathEnvNB env (moduleLoadedAt' m)
+    = withPathEnvNB UnsafeCriterion env (moduleLoadedAt' m)
 
 moduleLoadedAt' :: FilePath -> PathEnvData -> IO UTCTime
 moduleLoadedAt' name (_, _, modh)
@@ -326,7 +327,7 @@ moduleLoadedAt' name (_, _, modh)
          return (pm_time pm)
 
 loadedModules :: IO [String]
-loadedModules = withPathEnvNB env loadedModules' 
+loadedModules = withPathEnvNB UnsafeCriterion env loadedModules' 
 
 loadedModules' :: PathEnvData -> IO [String]
 loadedModules' (_, _, modh) = HT.toList modh >>= (\lst -> return (map fst lst))
