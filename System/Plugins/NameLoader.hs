@@ -42,6 +42,8 @@ import System.IO.Unsafe
 import System.Directory
 import Data.Time
 import Control.Exception (catch, SomeException)
+import System.Plugins.Criteria.LoadCriterion
+import System.Plugins.Criteria.UnsafeCriterion
 
 import qualified System.Plugins.DynamicLoader as DL
 
@@ -85,9 +87,10 @@ type NameEnvData = (Maybe FilePath, Maybe String,
 -}
 type NameEnv = (MVar (), IORef NameEnvData)
 
-withNameEnv :: NameEnv -> (NameEnvData -> IO b) -> IO b
-withNameEnv (mvar, ioref) f
-    = withMVar mvar (\_ -> readIORef ioref >>= f)
+withNameEnv :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> NameEnv -> (NameEnvData -> Effective c t) -> Effective c t
+withNameEnv crit (mvar, ioref) f
+    = withMVar mvar (\_ -> readIORef ioref >>= f' crit)
+  where f' crit = f
 
 withNameEnvNB :: NameEnv -> (NameEnvData -> IO b) -> IO b
 withNameEnvNB (_, ioref) f = readIORef ioref >>= f
@@ -131,7 +134,7 @@ result.
 
 -}
 addDependency :: Module -> Module -> IO ()
-addDependency from to = withNameEnv env (addDependency' from to)
+addDependency from to = withNameEnv UnsafeCriterion env (addDependency' from to)
 
 addDependency' :: Module -> Module -> NameEnvData -> IO ()
 addDependency' from to (_, _, _, _, _, deph, _)
@@ -143,7 +146,7 @@ Delete a module dependency.
 
 -}
 delDependency :: Module -> Module -> IO ()
-delDependency from to = withNameEnv env (delDependency' from to)
+delDependency from to = withNameEnv UnsafeCriterion env (delDependency' from to)
 
 delDependency' :: Module -> Module -> NameEnvData -> IO ()
 delDependency' from to (_, _, _, _, _, deph, _)
@@ -156,7 +159,7 @@ Delete all dependencies for a module.
 -}
 
 delAllDeps :: Module -> IO ()
-delAllDeps from = withNameEnv env (delAllDeps' from)
+delAllDeps from = withNameEnv UnsafeCriterion env (delAllDeps' from)
 
 delAllDeps' :: Module -> NameEnvData -> IO ()
 delAllDeps' from (_, _, _, _, _, deph, _)
@@ -169,9 +172,10 @@ Do something with the current dependencies of a module. You can't use
 withDependencies. If you do so, a deadlock will occur.
 
 -}
-withDependencies :: Module -> (Maybe [Module] -> IO a) -> IO a
-withDependencies from f
-    = withNameEnv env (\(_,_,_,_,_,deph,_) -> lookupHT deph from >>= f)
+withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> Module -> (Maybe [Module] -> Effective c t) -> Effective c t
+withDependencies crit from f
+    = withNameEnv crit env (\(_,_,_,_,_,deph,_) -> lookupHT deph from >>= f' crit)
+  where f' crit = f
 
 {-|
 
@@ -197,9 +201,9 @@ If any error occurs an exception is thrown.
 -}
 loadModule :: Module -> IO LoadedModule
 loadModule m 
-    = do withNameEnv env (\env -> do loadModuleWithDep m env
-                                     DL.resolveFunctions
-                                     return (LM m))
+    = do withNameEnv UnsafeCriterion env (\env -> do loadModuleWithDep m env
+                                                     DL.resolveFunctions
+                                                     return (LM m))
 
 loadModuleWithDep :: Module -> NameEnvData -> IO ()
 loadModuleWithDep name
@@ -239,7 +243,7 @@ been loaded more than once. An exception is thrown in case of error.
 -}
 unloadModule :: LoadedModule -> IO ()
 unloadModule (LM name) 
-    = withNameEnv env (unloadModuleWithDep name)
+    = withNameEnv UnsafeCriterion env (unloadModuleWithDep name)
 
 {-|
 
@@ -248,8 +252,8 @@ Same as @unloadModule@ just doesn't trow any exceptions on error.
 -}
 unloadModuleQuiet :: LoadedModule -> IO ()
 unloadModuleQuiet (LM name)
-    = withNameEnv env (\env -> catch (unloadModuleWithDep name env)
-                                  (\(_ :: SomeException) -> return ()))
+    = withNameEnv UnsafeCriterion env (\env -> catch (unloadModuleWithDep name env)
+                                       (\(_ :: SomeException) -> return ()))
 
 unloadModuleWithDep :: Module -> NameEnvData -> IO ()
 unloadModuleWithDep name env@(_, _, _, _, _, _, modh)
@@ -282,7 +286,7 @@ still call the old function).
 -}
 loadFunction :: LoadedModule -> String -> IO a
 loadFunction (LM m) name
-    = withNameEnv env (loadFunction' (nameToMWT m) name)
+    = withNameEnv UnsafeCriterion env (loadFunction' (nameToMWT m) name)
 
 loadFunction' :: ModuleWT -> String -> NameEnvData -> IO a
 loadFunction' (_, MT_Package) _ _ 
