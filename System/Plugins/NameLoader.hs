@@ -79,18 +79,18 @@ type NameEnvData = (Maybe FilePath, Maybe String,
 
 {- 
 
-   New SmarEnv that uses bot an IORef and a MVar
+   New NameEnv that uses both an IORef and a MVar
    to make it possible to have non blocking functions
    that inspect the state.
 
    Could perhaps change it to only use IORef (with atomicModifyIORef)
-   but lets play safe and have an MVar too.
+   but let's play safe and have an MVar too.
 
 -}
 type NameEnv = (MVar (), IORef NameEnvData)
 
 withNameEnv :: Loadable c t t' => Criterion c t -> NameEnv -> (NameEnvData -> Effective c t) -> Effective c t
-withNameEnv crit (mvar, ioref) f
+withNameEnv _ (mvar, ioref) f
     = withMVar mvar (\_ -> readIORef ioref >>= f)
 
 withNameEnvNB :: NameEnv -> (NameEnvData -> IO b) -> IO b

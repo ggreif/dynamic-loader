@@ -32,10 +32,10 @@ module System.Plugins.PathLoader (LoadedModule,
                                   loadedModules,
                                   DL.addDLL) where
 
-import Control.Monad
 import Control.Concurrent.MVar
 import Data.List
 import qualified Data.HashTable.IO as HT
+import Data.Hashable
 import Data.IORef
 import System.IO.Unsafe
 import System.Directory
@@ -75,7 +75,7 @@ type PathEnvData = (Maybe FilePath,
 
 {- 
 
-   New PathEnv that uses bot an IORef and a MVar
+   New PathEnv that uses both an IORef and a MVar
    to make it possible to have non blocking functions
    that inspect the state.
 
@@ -83,11 +83,11 @@ type PathEnvData = (Maybe FilePath,
 type PathEnv = (MVar (), IORef PathEnvData)
 
 withPathEnv :: Loadable c t t' => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
-withPathEnv crit (mvar, ioref) f
+withPathEnv _ (mvar, ioref) f
     = withMVar mvar (\_ -> readIORef ioref >>= f)
 
-withPathEnvNB :: Loadable c t t' => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
-withPathEnvNB crit (_, ioref) f = readIORef ioref >>= f
+withPathEnvNB :: PathEnv -> (PathEnvData -> IO b) -> IO b
+withPathEnvNB (_, ioref) f = readIORef ioref >>= f
 
 modifyPathEnv_ :: PathEnv -> (PathEnvData -> IO PathEnvData) -> IO ()
 modifyPathEnv_ (mvar, ioref) f
@@ -314,7 +314,7 @@ if the module isn't loaded.
 -}
 moduleLoadedAt :: LoadedModule -> IO UTCTime
 moduleLoadedAt (LM m _)
-    = withPathEnvNB UnsafeCriterion env (moduleLoadedAt' m)
+    = withPathEnvNB env (moduleLoadedAt' m)
 
 moduleLoadedAt' :: FilePath -> PathEnvData -> IO UTCTime
 moduleLoadedAt' name (_, _, modh)
@@ -324,7 +324,7 @@ moduleLoadedAt' name (_, _, modh)
          return (pm_time pm)
 
 loadedModules :: IO [String]
-loadedModules = withPathEnvNB UnsafeCriterion env loadedModules' 
+loadedModules = withPathEnvNB env loadedModules' 
 
 loadedModules' :: PathEnvData -> IO [String]
 loadedModules' (_, _, modh) = HT.toList modh >>= (\lst -> return (map fst lst))
@@ -332,25 +332,32 @@ loadedModules' (_, _, modh) = HT.toList modh >>= (\lst -> return (map fst lst))
 -- functions to handle HashTables in a better way
 
 -- it seems like it doesn't replace the old value on insert
+insertHT :: (Eq key, Hashable key) => HT.BasicHashTable key val -> key -> val -> IO ()
 insertHT ht key val 
     = do HT.delete ht key
          HT.insert ht key val
 
+insertHT_C :: (Eq key, Hashable key) => (val -> val -> val) -> HT.BasicHashTable key val -> key -> val -> IO ()
 insertHT_C func ht key val
     = do mval <- HT.lookup ht key
          case mval of
                    Just val' -> insertHT ht key (func val val')
                    Nothing   -> insertHT ht key val
 
+modifyHT :: (Eq key, Hashable key) => (val -> val) -> HT.BasicHashTable key val -> key -> IO ()
 modifyHT func ht key
     = do mval <- HT.lookup ht key
          case mval of
                    Just val -> insertHT ht key (func val)
                    Nothing  -> return ()
 
+lookupHT :: (Eq key, Hashable key) => HT.BasicHashTable key val -> key -> IO (Maybe val)
 lookupHT ht key = HT.lookup ht key
+
+deleteHT :: (Eq key, Hashable key) => HT.BasicHashTable key val -> key -> IO ()
 deleteHT ht key = HT.delete ht key
 
+lookupDefHT :: (Eq key, Hashable key) => HT.BasicHashTable key b -> b -> key -> IO b
 lookupDefHT ht val key
     = do mval <- HT.lookup ht key
          case mval of
