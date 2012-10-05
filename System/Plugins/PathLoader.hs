@@ -82,12 +82,10 @@ type PathEnv = (MVar (), IORef PathEnvData)
 
 withPathEnv :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
 withPathEnv crit (mvar, ioref) f
-    = withMVar mvar (\_ -> readIORef ioref >>= f' crit)
-  where f' crit = f
+    = withMVar mvar (\_ -> readIORef ioref >>= f)
 
 withPathEnvNB :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
-withPathEnvNB crit (_, ioref) f = readIORef ioref >>= f' crit
-  where f' crit = f
+withPathEnvNB crit (_, ioref) f = readIORef ioref >>= f
 
 modifyPathEnv_ :: PathEnv -> (PathEnvData -> IO PathEnvData) -> IO ()
 modifyPathEnv_ (mvar, ioref) f
@@ -173,11 +171,10 @@ Do something with the current dependencies of a module. You can't use
 withDependencies. If you do so, a deadlock will occur.
 
 -}
-withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> FilePath -> 
-                    (Maybe [(ModuleType, FilePath)] -> Effective c t) -> Effective c t
+withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> FilePath
+                 -> (Maybe [(ModuleType, FilePath)] -> Effective c t) -> Effective c t
 withDependencies crit from f
-    = withPathEnv crit env (\(_,deph,_) -> lookupHT deph from >>= f' crit)
-  where f' crit = f
+    = withPathEnv crit env (\(_,deph,_) -> lookupHT deph from >>= f)
 
 {-|
 
@@ -284,9 +281,8 @@ still call the old function).
 -}
 loadFunction :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> LoadedModule -> String -> Effective c t
 loadFunction crit (LM m MT_Module) name
-    = withPathEnv crit env (loadFunction' crit m name)
-  where --loadFunction' :: String -> String -> PathEnvData -> IO a
-        loadFunction' crit mname fname (_, _, modh)
+    = withPathEnv crit env (loadFunction' m name)
+  where loadFunction' mname fname (_, _, modh)
             = do mpm <- HT.lookup modh mname
                  pm <- maybe (fail $ "Module " ++ mname ++ " isn't loaded") 
                              return mpm
@@ -305,8 +301,7 @@ DynamicLinker.loadQualifiedFunction applies here too.
 loadQualifiedFunction :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> String -> Effective c t
 loadQualifiedFunction crit name
     = withPathEnv crit env (loadQualifiedFunction' name)
-  where --loadQualifiedFunction' :: String -> PathEnvData -> IO a
-        loadQualifiedFunction' qname _ = DL.loadQualifiedFunction qname
+  where loadQualifiedFunction' qname _ = DL.loadQualifiedFunction qname
 
 
 {-|

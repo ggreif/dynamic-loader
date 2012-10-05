@@ -89,8 +89,7 @@ type NameEnv = (MVar (), IORef NameEnvData)
 
 withNameEnv :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> NameEnv -> (NameEnvData -> Effective c t) -> Effective c t
 withNameEnv crit (mvar, ioref) f
-    = withMVar mvar (\_ -> readIORef ioref >>= f' crit)
-  where f' crit = f
+    = withMVar mvar (\_ -> readIORef ioref >>= f)
 
 withNameEnvNB :: NameEnv -> (NameEnvData -> IO b) -> IO b
 withNameEnvNB (_, ioref) f = readIORef ioref >>= f
@@ -174,8 +173,7 @@ withDependencies. If you do so, a deadlock will occur.
 -}
 withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> Module -> (Maybe [Module] -> Effective c t) -> Effective c t
 withDependencies crit from f
-    = withNameEnv crit env (\(_,_,_,_,_,deph,_) -> lookupHT deph from >>= f' crit)
-  where f' crit = f
+    = withNameEnv crit env (\(_,_,_,_,_,deph,_) -> lookupHT deph from >>= f)
 
 {-|
 
