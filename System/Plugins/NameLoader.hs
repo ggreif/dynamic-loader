@@ -13,7 +13,7 @@
 -- is thread safe.
 --
 ----------------------------------------------------------------------------
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds #-}
 
 module System.Plugins.NameLoader (Module, LoadedModule,
                                   ModuleType(..),
@@ -46,6 +46,8 @@ import System.Plugins.Criteria.LoadCriterion
 import System.Plugins.Criteria.UnsafeCriterion
 
 import qualified System.Plugins.DynamicLoader as DL
+
+type Loadable c t t' = (LoadCriterion c t, Effective c t ~ IO t')
 
 type Module = String
 
@@ -87,7 +89,7 @@ type NameEnvData = (Maybe FilePath, Maybe String,
 -}
 type NameEnv = (MVar (), IORef NameEnvData)
 
-withNameEnv :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> NameEnv -> (NameEnvData -> Effective c t) -> Effective c t
+withNameEnv :: Loadable c t t' => Criterion c t -> NameEnv -> (NameEnvData -> Effective c t) -> Effective c t
 withNameEnv crit (mvar, ioref) f
     = withMVar mvar (\_ -> readIORef ioref >>= f)
 
@@ -171,7 +173,7 @@ Do something with the current dependencies of a module. You can't use
 withDependencies. If you do so, a deadlock will occur.
 
 -}
-withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> Module -> (Maybe [Module] -> Effective c t) -> Effective c t
+withDependencies :: Loadable c t t' => Criterion c t -> Module -> (Maybe [Module] -> Effective c t) -> Effective c t
 withDependencies crit from f
     = withNameEnv crit env (\(_,_,_,_,_,deph,_) -> lookupHT deph from >>= f)
 

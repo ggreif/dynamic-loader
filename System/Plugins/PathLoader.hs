@@ -13,7 +13,7 @@
 -- is thread safe.
 --
 ----------------------------------------------------------------------------
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, ConstraintKinds #-}
 
 module System.Plugins.PathLoader (LoadedModule,
                                   ModuleType (..),
@@ -45,6 +45,8 @@ import System.Plugins.Criteria.LoadCriterion
 import System.Plugins.Criteria.UnsafeCriterion
 
 import qualified System.Plugins.DynamicLoader as DL
+
+type Loadable c t t' = (LoadCriterion c t, Effective c t ~ IO t')
 
 data LoadedModule = LM FilePath ModuleType
 
@@ -80,11 +82,11 @@ type PathEnvData = (Maybe FilePath,
 -}
 type PathEnv = (MVar (), IORef PathEnvData)
 
-withPathEnv :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
+withPathEnv :: Loadable c t t' => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
 withPathEnv crit (mvar, ioref) f
     = withMVar mvar (\_ -> readIORef ioref >>= f)
 
-withPathEnvNB :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
+withPathEnvNB :: Loadable c t t' => Criterion c t -> PathEnv -> (PathEnvData -> Effective c t) -> Effective c t
 withPathEnvNB crit (_, ioref) f = readIORef ioref >>= f
 
 modifyPathEnv_ :: PathEnv -> (PathEnvData -> IO PathEnvData) -> IO ()
@@ -171,7 +173,7 @@ Do something with the current dependencies of a module. You can't use
 withDependencies. If you do so, a deadlock will occur.
 
 -}
-withDependencies :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> FilePath
+withDependencies :: Loadable c t t' => Criterion c t -> FilePath
                  -> (Maybe [(ModuleType, FilePath)] -> Effective c t) -> Effective c t
 withDependencies crit from f
     = withPathEnv crit env (\(_,deph,_) -> lookupHT deph from >>= f)
@@ -279,7 +281,7 @@ still be valid if a new version of that module is loaded (it will thus
 still call the old function).
 
 -}
-loadFunction :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> LoadedModule -> String -> Effective c t
+loadFunction :: Loadable c t t' => Criterion c t -> LoadedModule -> String -> Effective c t
 loadFunction crit (LM m MT_Module) name
     = withPathEnv crit env (loadFunction' m name)
   where loadFunction' mname fname (_, _, modh)
@@ -298,7 +300,7 @@ exception if an error occurs. Same restriction as for
 DynamicLinker.loadQualifiedFunction applies here too.
 
 -}
-loadQualifiedFunction :: (LoadCriterion c t, Effective c t ~ IO t') => Criterion c t -> String -> Effective c t
+loadQualifiedFunction :: Loadable c t t' => Criterion c t -> String -> Effective c t
 loadQualifiedFunction crit name
     = withPathEnv crit env (loadQualifiedFunction' name)
   where loadQualifiedFunction' qname _ = DL.loadQualifiedFunction qname
