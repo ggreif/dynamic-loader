@@ -284,21 +284,16 @@ still be valid if a new version of that module is loaded (it will thus
 still call the old function).
 
 -}
-loadFunction :: LoadedModule -> String -> IO a
-loadFunction (LM m) name
-    = withNameEnv UnsafeCriterion env (loadFunction' (nameToMWT m) name)
-
-loadFunction' :: ModuleWT -> String -> NameEnvData -> IO a
-loadFunction' (_, MT_Package) _ _ 
-    = fail "Cannot load functions from packages"
-loadFunction' (mname, _) fname (_, _, _, _, _, _, modh)
-    = do msm <- HT.lookup modh mname
-         sm <- maybe (fail $ "Module " ++ mname ++ " isn't loaded") 
-                     return msm
-
-         let Left dm = sm_module sm
-         
-         DL.loadFunction dm fname
+loadFunction :: Loadable c t t' => Criterion c t -> LoadedModule -> String -> Effective c t
+loadFunction crit (LM m) name
+    = withNameEnv crit env (loadFunction' (nameToMWT m) name)
+  where loadFunction' (_, MT_Package) _ _ = fail "Cannot load functions from packages"
+        loadFunction' (mname, _) fname (_, _, _, _, _, _, modh)
+            = do msm <- HT.lookup modh mname
+                 sm <- maybe (fail $ "Module " ++ mname ++ " isn't loaded") 
+                             return msm
+                 let Left dm = sm_module sm
+                 DL.loadFunction dm fname
 
 
 {-|
