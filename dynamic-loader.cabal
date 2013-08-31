@@ -36,7 +36,7 @@ Tested-with:         GHC == 7.6.1, GHC == 7.6.3
 
 Build-type:          Simple
 
--- Extra-source-files:  dynamic-linker.pdf
+Data-files:          dynamic-linker.pdf
 
 Cabal-version:       >= 1.6
 
