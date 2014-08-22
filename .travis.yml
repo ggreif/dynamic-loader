@@ -9,18 +9,9 @@ env:
     - GHCVER=head
   global:
     - CABALVER=1.20
-    - HEAD_DEPS="diagrams-core"
 
 matrix:
   allow_failures:
     - env: GHCVER=head
 
-before_install:
-  - git clone http://github.com/ggreif/dynamic-loader travis
-  - source travis/scripts/set_env.sh
-  - ./travis/scripts/before_install.sh
-
-install: ./travis/scripts/install.sh
-
-script: ./travis/scripts/script.sh
 
