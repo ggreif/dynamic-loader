@@ -1,5 +1,9 @@
 language: haskell
 
+ghc:
+  - 7.8
+  - 7.6
+
 env:
   matrix:
     - HPVER=2012.4.0.0
