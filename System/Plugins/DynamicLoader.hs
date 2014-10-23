@@ -1,10 +1,12 @@
-{-# LANGUAGE CPP, MagicHash, UnboxedTuples #-}
+{-# LANGUAGE CPP           #-}
+{-# LANGUAGE MagicHash     #-}
+{-# LANGUAGE UnboxedTuples #-}
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  DynamicLoader
 -- Copyright   :  (c) Hampus Ram 2003-2004, Gabor Greif 2012
 -- License     :  BSD-style (see LICENSE)
--- 
+--
 -- Maintainer  :  ggreif+dynamic@gmail.com
 -- Stability   :  experimental
 -- Portability :  non-portable (ghc >= 7.6 only)
@@ -28,17 +30,18 @@ module System.Plugins.DynamicLoader (DynamicModule,
                                      unloadPackage,
                                      loadFunction,
                                      loadQualifiedFunction,
+                                     loadSymbol,
                                      resolveFunctions) where
 
-import Data.Char (ord)
-import Data.List
-import Control.Monad
+import           Control.Monad
+import           Data.Char        (ord)
+import           Data.List
 
-import GHC.Exts
-import Foreign.Ptr      (Ptr, nullPtr)
-import Foreign.C.String (CString, withCString, peekCString)
-import System.Directory (getCurrentDirectory, doesFileExist)
-import GHC.Prim
+import           Foreign.C.String (CString, peekCString, withCString)
+import           Foreign.Ptr      (Ptr, nullPtr)
+import           GHC.Exts
+import           GHC.Prim
+import           System.Directory (doesFileExist, getCurrentDirectory)
 
 {-
 
@@ -46,19 +49,19 @@ Foreign imports, hooks into the GHC RTS.
 
 -}
 
-foreign import ccall unsafe "loadObj" 
+foreign import ccall unsafe "loadObj"
      c_loadObj :: CString -> IO Int
 
-foreign import ccall unsafe "unloadObj" 
+foreign import ccall unsafe "unloadObj"
      c_unloadObj :: CString -> IO Int
 
-foreign import ccall unsafe "resolveObjs" 
+foreign import ccall unsafe "resolveObjs"
      c_resolveObjs :: IO Int
 
-foreign import ccall unsafe "lookupSymbol" 
+foreign import ccall unsafe "lookupSymbol"
      c_lookupSymbol :: CString -> IO (Ptr a)
 
-foreign import ccall unsafe "addDLL" 
+foreign import ccall unsafe "addDLL"
      c_addDLL :: CString -> IO CString
 
 -- split up qualified name so one could easily transform it
@@ -77,7 +80,7 @@ System.Posix.DynamicLinker instead.
 -}
 
 addDLL :: String -> IO ()
-addDLL str = withCString str 
+addDLL str = withCString str
                (\s -> do err <- c_addDLL s
                          unless (err == nullPtr)
                                 (do msg <- peekCString err
@@ -92,7 +95,7 @@ is given \"o\" is used.
 
 If we have our module hierarchy in @\/usr\/lib\/modules@ and we want to
 load the module @Foo.Bar@ located in @\/usr\/lib\/modules\/Foo\/Bar.o@ we
-could issue the command: 
+could issue the command:
 
 @loadModule \"Foo.Bar\" (Just \"\/usr\/lib\/modules\") Nothing@
 
@@ -110,7 +113,7 @@ loadModule name mpath msuff
 
          let qname = split '.' name
              suff  = maybe "o" id msuff
-             path  = base ++ '/' : concat (intersperse "/" qname) ++ 
+             path  = base ++ '/' : concat (intersperse "/" qname) ++
                      '.' : suff
          ret <- withCString path c_loadObj
          if ret /= 0
@@ -123,7 +126,7 @@ Load a module given its full path and maybe a base directory to use in
 figuring out the module's hierarchical name. If no base directory is
 given, it is set to the current directory.
 
-For instance if one wants to load module @Foo.Bar@ located in 
+For instance if one wants to load module @Foo.Bar@ located in
 @\/usr\/modules\/Foo\/Bar.o@ one would issue the command:
 
 @loadModuleFromPath \"\/usr\/modules\/Foo\/Bar.o\" (Just
@@ -139,7 +142,7 @@ loadModuleFromPath path mbase
          qual <- dropIsEq base path
 
          -- not very smart but simple...
-         let name = reverse $ drop 1 $ dropWhile (/='.') $ 
+         let name = reverse $ drop 1 $ dropWhile (/='.') $
                     reverse $ if head qual == '/' then drop 1 qual else qual
 
              qname = split '/' name
@@ -152,7 +155,7 @@ loadModuleFromPath path mbase
     where dropIsEq [] ys = return ys
           dropIsEq (x:xs) (y:ys)
                    | x == y    = dropIsEq xs ys
-                   | otherwise = fail $ "Unable to get qualified name from: " 
+                   | otherwise = fail $ "Unable to get qualified name from: "
                                        ++ path
           dropIsEq _ _ = fail $ "Unable to get qualified name from: " ++ path
 
@@ -173,14 +176,14 @@ package suffix to \"o\".
 
 This function also loads accompanying cbits-packages. I.e. if you load
 the package @base@ located in @\/usr\/modules@ using @HS@ and @o@ as
-prefix and suffix, @loadPackage@ will also look for the file 
+prefix and suffix, @loadPackage@ will also look for the file
 @\/usr\/modules\/HSbase_cbits.o@ and load it if present.
 
 If it fails to load a package it will throw an exception. You will
 need to resolve functions before you use any functions loaded.
 
 -}
-loadPackage :: String -> Maybe FilePath -> Maybe String -> Maybe String -> 
+loadPackage :: String -> Maybe FilePath -> Maybe String -> Maybe String ->
                IO DynamicPackage
 loadPackage name mpath mpre msuff
     = do base <- case mpath of
@@ -197,14 +200,14 @@ loadPackage name mpath mpre msuff
          -- this will generate an extra unnecessary call checking for
          -- FOO_cbits_cbits, but it looks nicer!
          cbitsExist <- doesFileExist cbits_path
-         if cbitsExist 
+         if cbitsExist
             then do rtp <- loadPackage (name ++ "_cbits") mpath mpre msuff
                     return (RTP path (Just rtp))
             else return (RTP path Nothing)
 
-    where packageName :: String -> FilePath -> Maybe String -> 
+    where packageName :: String -> FilePath -> Maybe String ->
                          Maybe String -> FilePath
-          packageName name path mpre msuff 
+          packageName name path mpre msuff
               = let prefix = maybe "HS" id mpre
                     suffix = maybe "o" id msuff
                 in path ++ '/' : prefix ++ name ++ '.' : suffix
@@ -233,7 +236,7 @@ loadPackageFromPath path
          -- this will generate an extra unnecessary call checking for
          -- FOO_cbits_cbits, but it looks nicer!
          cbitsExist <- doesFileExist cbits_path
-         if cbitsExist 
+         if cbitsExist
             then do rtp <- loadPackageFromPath cbits_path
                     return (RTP path (Just rtp))
             else return (RTP path Nothing)
@@ -242,7 +245,7 @@ loadPackageFromPath path
           cbitsName name
               = let suffix = reverse $! takeWhile (/='.') rname
                     rname  = reverse name
-                in reverse (drop (length suffix + 1) rname) ++ 
+                in reverse (drop (length suffix + 1) rname) ++
                    "_cbits." ++ suffix -- wrong but simple...
 
 {-|
@@ -278,8 +281,8 @@ Beware that this function isn't type-safe in any way!
 
 -}
 loadFunction :: DynamicModule -> String -> IO a
-loadFunction dm functionName 
-    = do Ptr addr <- lookupSymbol (dm_qname dm) functionName
+loadFunction dm functionName
+    = do Ptr addr <- lookupQNameSymbol (dm_qname dm) functionName
          case addrToAny# addr of
                   (# hval #) -> return hval
 
@@ -301,7 +304,24 @@ Beware that this function isn't type-safe in any way!
 loadQualifiedFunction :: String -> IO a
 loadQualifiedFunction functionName
     = do let qfunc = split '.' functionName
-         Ptr addr <- lookupSymbol (init qfunc) (last qfunc)
+         Ptr addr <- lookupQNameSymbol (init qfunc) (last qfunc)
+         case addrToAny# addr of
+                  (# hval #) -> return hval
+
+
+{-
+
+Load a symbol by specifying the symbol table name directly.  If the symbol
+can't be found, an exception will be thrown.  You must call @resolveFunctions@
+before you call this.
+
+Beware that this function isn't type-safe in any way!
+
+-}
+
+loadSymbol :: String -> IO a
+loadSymbol symbolName
+    = do Ptr addr <- lookupSymbol symbolName
          case addrToAny# addr of
                   (# hval #) -> return hval
 
@@ -313,23 +333,34 @@ exception.
 
 -}
 resolveFunctions :: IO ()
-resolveFunctions 
+resolveFunctions
     = do ret <- c_resolveObjs
          when (ret == 0) (fail "Unable to resolve functions!")
 
 {-|
 
-Find a symbol in a module's symbol-table. Throw an exception if it
-isn't found.
+Find a symbol by specifying the symbol's name directly.  Throw an exception if
+if isn't found.
 
 -}
-lookupSymbol :: [String] -> String -> IO (Ptr a)
-lookupSymbol qname functionName
+lookupSymbol :: String -> IO (Ptr a)
+lookupSymbol symbolName
     = do ptr <- withCString symbolName c_lookupSymbol
          if ptr /= nullPtr
             then return ptr
             else fail $ "Could not load symbol: " ++ symbolName
-    where 
+
+
+{-|
+
+Find a symbol in a module's symbol-table by qname. Throw an exception if it
+isn't found.
+
+-}
+lookupQNameSymbol :: [String] -> String -> IO (Ptr a)
+lookupQNameSymbol qname functionName
+    = lookupSymbol symbolName
+    where
     moduleName = encode $ concat (intersperse "." qname)
     realFunctionName = encode functionName
 
