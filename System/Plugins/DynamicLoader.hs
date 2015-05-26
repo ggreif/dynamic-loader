@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, MagicHash, UnboxedTuples #-}
+{-# LANGUAGE MagicHash, UnboxedTuples #-}
 ----------------------------------------------------------------------------
 -- |
 -- Module      :  DynamicLoader
@@ -39,6 +39,7 @@ import Foreign.Ptr      (Ptr, nullPtr)
 import Foreign.C.String (CString, withCString, peekCString)
 import System.Directory (getCurrentDirectory, doesFileExist)
 import GHC.Prim
+import System.Info (os)
 
 {-
 
@@ -335,11 +336,7 @@ lookupSymbol qname functionName
 
     -- On OS X all functions have an extra _, at least that
     -- is what people say. Not tested!
-#ifdef __MACOSX__
-    symbolName = "_" ++ moduleName ++ "_" ++ realFunctionName ++ "_closure"
-#else
-    symbolName = moduleName ++ "_" ++ realFunctionName ++ "_closure"
-#endif
+    symbolName = (if os == "darwin" then "_" else "") ++ moduleName ++ "_" ++ realFunctionName ++ "_closure"
 
     encode :: String -> String
     encode str = concatMap encode_ch str
