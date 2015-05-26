@@ -47,6 +47,9 @@ Foreign imports, hooks into the GHC RTS.
 
 -}
 
+foreign import ccall unsafe "initLinker"
+     c_initLinker :: IO ()
+
 foreign import ccall unsafe "loadObj" 
      c_loadObj :: CString -> IO Int
 
@@ -78,7 +81,9 @@ System.Posix.DynamicLinker instead.
 -}
 
 addDLL :: String -> IO ()
-addDLL str = withCString str 
+addDLL str
+    = do c_initLinker
+         withCString str
                (\s -> do err <- c_addDLL s
                          unless (err == nullPtr)
                                 (do msg <- peekCString err
@@ -107,7 +112,9 @@ If it cannot load the object it will throw an exception.
 -}
 loadModule :: String -> Maybe FilePath -> Maybe String -> IO DynamicModule
 loadModule name mpath msuff
-    = do base <- maybe getCurrentDirectory return mpath
+    = do c_initLinker
+
+         base <- maybe getCurrentDirectory return mpath
 
          let qname = split '.' name
              suff  = maybe "o" id msuff
@@ -135,7 +142,8 @@ If it cannot load the object it will throw an exception.
 -}
 loadModuleFromPath :: FilePath -> Maybe FilePath -> IO DynamicModule
 loadModuleFromPath path mbase
-    = do base <- maybe getCurrentDirectory return mbase
+    = do c_initLinker
+         base <- maybe getCurrentDirectory return mbase
 
          qual <- dropIsEq base path
 
@@ -184,7 +192,8 @@ need to resolve functions before you use any functions loaded.
 loadPackage :: String -> Maybe FilePath -> Maybe String -> Maybe String -> 
                IO DynamicPackage
 loadPackage name mpath mpre msuff
-    = do base <- case mpath of
+    = do c_initLinker
+         base <- case mpath of
                             Just a -> return a
                             _      -> getCurrentDirectory
 
@@ -226,7 +235,8 @@ need to resolve functions before you use any functions loaded.
 -}
 loadPackageFromPath :: FilePath -> IO DynamicPackage
 loadPackageFromPath path
-    = do ret <- withCString path c_loadObj
+    = do c_initLinker
+         ret <- withCString path c_loadObj
          unless (ret /= 0) (fail $ "Unable to load package: " ++ path)
 
          let cbits_path = cbitsName path
@@ -254,7 +264,8 @@ any). Throws an exception if any unloading fails.
 -}
 unloadPackage :: DynamicPackage -> IO ()
 unloadPackage (RTP { dp_path = path, dp_cbits = cbits })
-    = do ret <- withCString path c_unloadObj
+    = do c_initLinker
+         ret <- withCString path c_unloadObj
          unless (ret /= 0) (fail $ "Unable to unload package: " ++ path)
          maybe (return ()) unloadPackage cbits
 
@@ -266,7 +277,8 @@ will be thrown.
 -}
 unloadModule :: DynamicModule -> IO ()
 unloadModule (RTM { dm_path = path })
-    = do ret <- withCString path c_unloadObj
+    = do c_initLinker
+         ret <- withCString path c_unloadObj
          unless (ret /= 0) (fail $ "Unable to unload module: " ++ path)
 
 {-|
@@ -280,7 +292,8 @@ Beware that this function isn't type-safe in any way!
 -}
 loadFunction :: DynamicModule -> String -> IO a
 loadFunction dm functionName 
-    = do Ptr addr <- lookupSymbol (dm_qname dm) functionName
+    = do c_initLinker
+         Ptr addr <- lookupSymbol (dm_qname dm) functionName
          case addrToAny# addr of
                   (# hval #) -> return hval
 
@@ -301,7 +314,8 @@ Beware that this function isn't type-safe in any way!
 -}
 loadQualifiedFunction :: String -> IO a
 loadQualifiedFunction functionName
-    = do let qfunc = split '.' functionName
+    = do c_initLinker
+         let qfunc = split '.' functionName
          Ptr addr <- lookupSymbol (init qfunc) (last qfunc)
          case addrToAny# addr of
                   (# hval #) -> return hval
@@ -315,7 +329,8 @@ exception.
 -}
 resolveFunctions :: IO ()
 resolveFunctions 
-    = do ret <- c_resolveObjs
+    = do c_initLinker
+         ret <- c_resolveObjs
          when (ret == 0) (fail "Unable to resolve functions!")
 
 {-|
