@@ -334,8 +334,7 @@ lookupSymbol qname functionName
     moduleName = encode $ concat (intersperse "." qname)
     realFunctionName = encode functionName
 
-    -- On OS X all functions have an extra _, at least that
-    -- is what people say. Not tested!
+    -- On OS X all functions have an extra _.
     symbolName = (if os == "darwin" then "_" else "") ++ moduleName ++ "_" ++ realFunctionName ++ "_closure"
 
     encode :: String -> String
