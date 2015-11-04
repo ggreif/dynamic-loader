@@ -1,7 +1,7 @@
 language: haskell
 
 ghc:
-  - head
+  - '7.10'
   - 7.8
   - 7.6
 
