@@ -291,7 +291,7 @@ unloadArchive :: DynamicArchive -> IO ()
 unloadArchive (RTA { da_path = path })
     = do c_initLinker
          ret <- withCString path c_unloadObj
-         unless (ret /= 0) (fail $ "Unable to unload package: " ++ path)
+         unless (ret /= 0) (fail $ "Unable to unload archive: " ++ path)
 
 {-|
 
