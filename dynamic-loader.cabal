@@ -1,6 +1,6 @@
 Name:                dynamic-loader
 
-Version:             0.0.0.2
+Version:             0.0.0.1
 
 Synopsis:            lightweight loader of GHC-based modules or packages
 
