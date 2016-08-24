@@ -17,6 +17,8 @@ module System.Plugins.DynamicLoader (DynamicModule,
                                      dm_path,
                                      DynamicPackage,
                                      dp_path,
+                                     DynamicArchive,
+                                     da_path,
 
                                      addDLL,
 
@@ -24,8 +26,10 @@ module System.Plugins.DynamicLoader (DynamicModule,
                                      loadModuleFromPath,
                                      loadPackage,
                                      loadPackageFromPath,
+                                     loadArchiveFromPath,
                                      unloadModule,
                                      unloadPackage,
+                                     unloadArchive,
                                      loadFunction,
                                      loadQualifiedFunction,
                                      resolveFunctions) where
@@ -56,6 +60,9 @@ foreign import ccall unsafe "loadObj"
 foreign import ccall unsafe "unloadObj" 
      c_unloadObj :: CString -> IO Int
 
+foreign import ccall unsafe "loadArchive"
+     c_loadArchive :: CString -> IO Int
+
 foreign import ccall unsafe "resolveObjs" 
      c_resolveObjs :: IO Int
 
@@ -72,6 +79,9 @@ data DynamicModule = RTM { dm_qname :: [String],
 
 data DynamicPackage = RTP { dp_path  :: FilePath,
                             dp_cbits :: Maybe DynamicPackage }
+
+newtype DynamicArchive = RTA { da_path :: FilePath }
+
 {-|
 
 Dynamically load a shared library (DLL or .so). A shared library can't
@@ -255,6 +265,33 @@ loadPackageFromPath path
                     rname  = reverse name
                 in reverse (drop (length suffix + 1) rname) ++ 
                    "_cbits." ++ suffix -- wrong but simple...
+
+{-|
+
+Load an archive of GHC modules. Recent versions of GHC store packages
+as archives.
+
+If it fails to load the archive it will throw an exception. You will
+need to resolve functions before you use any functions loaded.
+
+-}
+loadArchiveFromPath :: FilePath -> IO DynamicArchive
+loadArchiveFromPath path
+    = do c_initLinker
+         ret <- withCString path c_loadArchive
+         unless (ret /= 0) (fail $ "Unable to load archive: " ++ path)
+         return (RTA path)
+
+{-|
+
+Unload an archive. Throws an exception if any unloading fails.
+
+-}
+unloadArchive :: DynamicArchive -> IO ()
+unloadArchive (RTA { da_path = path })
+    = do c_initLinker
+         ret <- withCString path c_unloadObj
+         unless (ret /= 0) (fail $ "Unable to unload archive: " ++ path)
 
 {-|
 
