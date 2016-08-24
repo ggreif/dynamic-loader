@@ -1,6 +1,6 @@
 Name:                dynamic-loader
 
-Version:             0.0.0.1
+Version:             0.0.0.2
 
 Synopsis:            lightweight loader of GHC-based modules or packages
 
@@ -14,6 +14,7 @@ Description:         This package allows the linking against GHC-compiled
                      Release history:
                      .
                      [0.0] Initial version (testing Hackage build)
+                     [0.0.0.2] Added support for archives.
 
 Homepage:            https://github.com/ggreif/dynamic-loader
 Bug-reports:         https://github.com/ggreif/dynamic-loader/issues
