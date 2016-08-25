@@ -14,7 +14,8 @@ Description:         This package allows the linking against GHC-compiled
                      Release history:
                      .
                      [0.0] Initial version (testing Hackage build)
-                     [0.0.1] Added support for archives.
+                     .
+                     [0.0.1] Added support for archives
 
 Homepage:            https://github.com/ggreif/dynamic-loader
 Bug-reports:         https://github.com/ggreif/dynamic-loader/issues
