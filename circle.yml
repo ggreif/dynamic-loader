@@ -1,3 +1,7 @@
+# /for/ version: 2
+## ^^^ consult https://circleci.com/docs/2.0/migrating-from-1-2
+##     and https://circleci.com/docs/2.0/
+
 machine:
   ghc:
     version: 7.10.2
